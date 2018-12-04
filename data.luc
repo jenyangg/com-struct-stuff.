@@ -1,0 +1,15 @@
+module data (
+    input clk,  // clock
+    input rst,  // reset    
+    input value[4],
+    output valout [4]
+  ) {
+
+.clk(clk), .rst(rst) {
+    dff vals[4];
+  }
+  always {
+    vals.d = value;
+    valout =  vals.q;
+  }
+}
