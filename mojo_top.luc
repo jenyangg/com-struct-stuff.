@@ -1,7 +1,7 @@
 module mojo_top (
     input clk,              // 50MHz clock
     input rst_n,            // reset button (active low)
-    output led [8],         // 8 user controllable LEDs
+    
     input cclk,             // configuration clock, AVR ready when high
     output spi_miso,        // AVR SPI MISO
     input spi_ss,           // AVR SPI Slave Select
@@ -11,73 +11,159 @@ module mojo_top (
     input avr_tx,           // AVR TX (FPGA RX)
     output avr_rx,          // AVR RX (FPGA TX)
     input avr_rx_busy,      // AVR RX buffer full
-    output io_led [3][8],   // LEDs on IO Shield
-    output io_seg [8],      // 7-segment LEDs on IO Shield
-    output io_sel [4],      // Digit select on IO Shield
-    input io_button [5],    // 5 buttons on IO Shield
-    input io_dip [3][8]     // DIP switches on IO Shield
+    input io_button[5],
+    input button[8],
+    input start_button,
+    //input check_grid[25],
+    output grid_led[25],
+    output z_led[25],
+    output sevens[8],
+    output lemmetry[2]
   ) {
   
   sig rst;                  // reset signal
   
-.clk(clk) {
-  // The reset conditioner is used to synchronize the reset signal to the FPGA
-  // clock. This ensures the entire FPGA comes out of reset at the same time.
-  reset_conditioner reset_cond;
-    fsm state = {DEFAULT, GO,SURVIVED};
+  .clk(clk) {
+    reset_conditioner reset_cond;
+    
     edge_detector edge_detector (#RISE(1), #FALL(0));
- 
-  .rst(rst) {
-      }
-}
- 
-    multi_seven_seg seg(.rst(rst),.clk(clk));
-    multi_dec_ctr dec_ctr(.rst(rst),.clk(clk));
-    counter ctr (#SIZE(1), #DIV(24),.rst(rst),.clk(clk));
+    
+    button_conditioner bcstart;
+    button_conditioner bc1up;
+    button_conditioner bc1down;
+    button_conditioner bc1left;
+    button_conditioner bc1right;
+    button_conditioner bc2up;
+    button_conditioner bc2down;
+    button_conditioner bc2left;
+    button_conditioner bc2right;
+    
+    edge_detector edstart (#FALL(0));
+    edge_detector ed1up (#FALL(0));
+    edge_detector ed1down (#FALL(0));
+    edge_detector ed1left (#FALL(0));
+    edge_detector ed1right (#FALL(0));
+    edge_detector ed2up (#FALL(0));
+    edge_detector ed2down (#FALL(0));
+    edge_detector ed2left (#FALL(0));
+    edge_detector ed2right (#FALL(0));
+    
+    fsm state = {DEFAULT, GO, SURVIVED,DEAD};
+    playermovement playermovement;
+    zombmovement zombmovement;
+   
+   
+   .rst(rst) {
+    counter countr(#SIZE(1), #DIV(24));
+    multi_dec_ctr dec_ctr;
+    multi_seven_seg seg;
+    }
+  }
+  
+
   always {
     reset_cond.in = ~rst_n; // input raw inverted reset signal
-    rst = reset_cond.out;   // conditioned reset
-    
-    led = 8h00;             // turn LEDs off    
+    rst = reset_cond.out;   // conditioned reset    
     spi_miso = bz;          // not using SPI
     spi_channel = bzzzz;    // not using flags
     avr_rx = bz;            // not using serial port
+    grid_led[24:0] = 8h00;
     
-    io_led = 3x{{8h00}};    // turn LEDs off
+    
+   ////// BUTTONS //////
+    
+    bcstart.in = start_button;
+    edstart.in = bcstart.out;
+    playermovement.start_button = edstart.out;
+    zombmovement.start_button = edstart.out;
+    
+    bc1up.in = button[0];
+    ed1up.in = bc1up.out;
+    playermovement.button[0] = ed1up.out;
+    zombmovement.button[0] = ed1up.out;
+    
+    bc1left.in = button[1];
+    ed1left.in = bc1left.out;
+    playermovement.button[1] = ed1left.out;
+    zombmovement.button[1] = ed1left.out;
+    
+    bc1right.in = button[2];
+    ed1right.in = bc1right.out;
+    playermovement.button[2] = ed1right.out;
+    zombmovement.button[2] = ed1right.out;
+    
+    bc1down.in = button[3];
+    ed1down.in = bc1down.out;
+    playermovement.button[3] = ed1down.out;
+    zombmovement.button[3] = ed1down.out;
+    
+    bc2up.in = button[4];
+    ed2up.in = bc2up.out;
+    playermovement.button[4] = ed2up.out;
+    zombmovement.button[4] = ed2up.out;
+    
+    bc2left.in = button[5];
+    ed2left.in = bc2left.out;
+    playermovement.button[5] = ed2left.out;
+    zombmovement.button[5] = ed2left.out;
+    
+    bc2right.in = button[6];
+    ed2right.in = bc2right.out;
+    playermovement.button[6] = ed2right.out;
+    zombmovement.button[6] = ed2right.out;
+    
+    bc2down.in = button[7];
+    ed2down.in = bc2down.out;
+    playermovement.button[7] = ed2down.out;
+    zombmovement.button[7] = ed2down.out;
+    
+    
+    /////////////////////
+    playermovement.z_led[24:0]=zombmovement.z_led;
+    grid_led[24:0] = playermovement.grid_led[24:0];
+    
+    zombmovement.grid_led[24:0]=playermovement.grid_led[24:0];
+    zombmovement.rst = rst;
+    z_led[24:0] = zombmovement.z_led[24:0];
+    zombmovement.signal = 0;
+    
+    ////////////////////
     
     edge_detector.in = 0;
-    dec_ctr.inc = 0;
+    
+    seg.values[0] =4b0;
+    seg.values[1] =4b0;
 
-    seg.values[0] = 0;
-    seg.values[1] = 0;
-    seg.values[2] = 0;
-    seg.values[3] = 0;
- 
-    io_seg = ~0; // connect segments to the driver
-    io_sel = ~0; // connect digit select to the driver    
+    
+   
+    dec_ctr.inc = 0;
+    sevens = 8b11111111;
+    lemmetry[0] = 0;
+    lemmetry[1] = 1;
+    
     
     case(state.q){
-    
-      state.DEFAULT:
-      if (io_button[0]){  
-        state.d = state.GO;}
-        
-    
-      state.GO:
-      led = 8hff;
-      edge_detector.in = ctr.value;
-      dec_ctr.inc = edge_detector.out;
-      seg.values = dec_ctr.digits;  
- 
-      io_seg = ~seg.seg; // connect segments to the driver
-      io_sel = ~seg.sel; // connect digit select to the driver
-        
-      if (dec_ctr.digits[0] == 4h00 && dec_ctr.digits[1] == 4h00 && dec_ctr.digits[2] == 4h00 && dec_ctr.digits[3] == 4h00 ){
-        state.d = state.SURVIVED;
-          }
-        
-      state.SURVIVED:
-      led = 8h00;
+    state.DEFAULT:
+    if(start_button){
+        state.d= state.GO;
         }
-    }
+    
+    state.GO:
+    edge_detector.in = countr.value;
+    zombmovement.signal = edge_detector.out;
+    dec_ctr.inc = edge_detector.out;
+    seg.values[0] = dec_ctr.digits[0];
+    seg.values[1] = dec_ctr.digits[1];
+    sevens = ~seg.seg;
+    lemmetry = ~seg.sel;
+    
+    
+    if (seg.seg != 8b0111111){
+      if(playermovement.grid_led == 25b0){
+        state.d = state.DEAD;
+    }}
+    state.DEAD:
+    dec_ctr.inc = 0;  
   }
+ }
+}
