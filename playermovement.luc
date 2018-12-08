@@ -3,6 +3,8 @@ module playermovement (
     input button[8],
     input z_led[25],
     input start_button,
+    input reset_btn,
+    input level_2_button,
     output grid_led[25]
     
   ) {
@@ -10,23 +12,22 @@ module playermovement (
   sig rst;
   
     .clk(clk) {
-  fsm state = {DEFAULT, SAVE_A,  COMPUTE_LEFT_P1, COMPUTE_RIGHT_P1, COMPUTE_UP_P1, COMPUTE_DOWN_P1,COMPUTE_LEFT_P2, COMPUTE_RIGHT_P2, COMPUTE_UP_P2, COMPUTE_DOWN_P2 };
+  fsm state = {DEFAULT, SAVE_A,  COMPUTE_LEFT_P1, COMPUTE_RIGHT_P1, COMPUTE_UP_P1, COMPUTE_DOWN_P1,COMPUTE_LEFT_P2, COMPUTE_RIGHT_P2, COMPUTE_UP_P2, COMPUTE_DOWN_P2 ,KILL_P1, KILL_P2};
     // The reset conditioner is used to synchronize the reset signal to the FPGA
     // clock. This ensures the entire FPGA comes out of reset at the same time.
     //reset_conditioner reset_cond;
     dff input_a[32]; //store instance of alu.a p1
     dff input_b[32]; //store instance of alu.a p2
-
+    dff killp1;
+    dff killp2;
     
     }
     dff p1map[25](.clk(clk), .rst(rst));
     dff p2map[25](.clk(clk), .rst(rst));
     alu alu;
     movement movement(.clk(clk), .rst(rst));
-
   always {
     grid_led[24:0] = 8h00;
-    
     alu.a=8b1;
       alu.b=0;
       alu.alufn=8b00000000;
@@ -34,25 +35,514 @@ module playermovement (
     movement.init2 = p2map.q;
     p1map.d = movement.p1move;
     p2map.d = movement.p2move;
-    
+    movement.p1die=killp1.q;
+    killp1.d=movement.p1kill;
+    movement.p2die=killp2.q;
+    killp2.d=movement.p2kill;
     
     
      case(state.q) { //FSM
          
       state.DEFAULT:
+      
       if(start_button){
       p1map.d = 25b1;
       p2map.d = 25b1000000000000000000000000;
       
         state.d = state.SAVE_A;}
-          
+       if(level_2_button){
+      p1map.d = 25b1;
+      p2map.d = 25b1000000000000000000000000;
+      
+        state.d = state.SAVE_A;}
+             
         state.SAVE_A: //input and store A
           input_a.d = p1map.q;
           input_b.d = p2map.q;
-          if (z_led==p1map.q){
-        movement.init=0;}
-          if (z_led==p2map.q){
-        movement.init2=0;}
+        
+        //RESET
+        if(reset_btn){
+        //MUST INITIATE AT 0 SO RESET BUTTON WORKS
+        p1map.d=25b0;
+        p2map.d=25b0;
+          movement.init=p1map.q;
+          movement.init2=p2map.q;
+        state.d=state.DEFAULT;}
+ //KILL PLAYERS USING COMPARATOR ALU
+      if (z_led[0]==1){
+        alu.a=z_led[0];
+          alu.b=input_a.q[0];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+          movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[0];
+          alu.b=input_b.q[0];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+        movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+      if (z_led[1]==1){
+        alu.a=z_led[1];
+          alu.b=input_a.q[1];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+          movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[1];
+          alu.b=input_b.q[1];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+          movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+      if (z_led[2]==1){
+        alu.a=z_led[2];
+          alu.b=input_a.q[2];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+          movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[2];
+          alu.b=input_b.q[2];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+       movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+
+      if (z_led[3]==1){
+        alu.a=z_led[3];
+          alu.b=input_a.q[3];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+          movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[3];
+          alu.b=input_b.q[3];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+          movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+
+      if (z_led[4]==1){
+        alu.a=z_led[4];
+          alu.b=input_a.q[4];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+          movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[4];
+          alu.b=input_b.q[4];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+         movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+      if (z_led[5]==1){
+        alu.a=z_led[5];
+          alu.b=input_a.q[5];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+          movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            
+        else{
+            alu.a=z_led[5];
+          alu.b=input_b.q[5];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+         movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+     if (z_led[6]==1){
+        alu.a=z_led[6];
+          alu.b=input_a.q[6];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+         movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[6];
+          alu.b=input_b.q[6];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+         movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+     if (z_led[7]==1){
+        alu.a=z_led[7];
+          alu.b=input_a.q[7];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+         movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[7];
+          alu.b=input_b.q[7];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+         movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+
+      if (z_led[8]==1){
+        alu.a=z_led[8];
+          alu.b=input_a.q[8];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+          movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[8];
+          alu.b=input_b.q[8];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+       movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+
+      if (z_led[9]==1){
+        alu.a=z_led[9];
+          alu.b=input_a.q[9];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+          movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[9];
+          alu.b=input_b.q[9];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+         movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+
+      if (z_led[10]==1){
+        alu.a=z_led[10];
+          alu.b=input_a.q[10];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+          movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[10];
+          alu.b=input_b.q[10];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+         movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+            
+      if (z_led[11]==1){
+        alu.a=z_led[11];
+          alu.b=input_a.q[11];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+          movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[11];
+          alu.b=input_b.q[11];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+        movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+
+      if (z_led[12]==1){
+        alu.a=z_led[12];
+          alu.b=input_a.q[12];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+          movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[12];
+          alu.b=input_b.q[12];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+          movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+
+      if (z_led[13]==1){
+        alu.a=z_led[13];
+          alu.b=input_a.q[13];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+        movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[13];
+          alu.b=input_b.q[13];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+        movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+            
+      if (z_led[14]==1){
+        alu.a=z_led[14];
+          alu.b=input_a.q[14];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+        movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[14];
+          alu.b=input_b.q[14];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+         movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+            
+      if (z_led[15]==1){
+        alu.a=z_led[15];
+          alu.b=input_a.q[15];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+       movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[15];
+          alu.b=input_b.q[15];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+          movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+            
+      if (z_led[16]==1){
+        alu.a=z_led[16];
+          alu.b=input_a.q[16];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+        movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[16];
+          alu.b=input_b.q[16];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+        movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+            
+      if (z_led[17]==1){
+        alu.a=z_led[17];
+          alu.b=input_a.q[17];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+         movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[17];
+          alu.b=input_b.q[17];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+          movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+            
+      if (z_led[18]==1){
+        alu.a=z_led[18];
+          alu.b=input_a.q[18];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+         movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[18];
+          alu.b=input_b.q[18];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+          movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+            
+      if (z_led[19]==1){
+        alu.a=z_led[19];
+          alu.b=input_a.q[19];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+       movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[19];
+          alu.b=input_b.q[19];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+        movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+
+      if (z_led[20]==1){
+        alu.a=z_led[20];
+          alu.b=input_a.q[20];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+         movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[20];
+          alu.b=input_b.q[20];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+          movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+            
+      if (z_led[21]==1){
+        alu.a=z_led[21];
+          alu.b=input_a.q[21];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+        movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[21];
+          alu.b=input_b.q[21];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+         movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+
+      if (z_led[22]==1){
+        alu.a=z_led[22];
+          alu.b=input_a.q[22];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+         movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[22];
+          alu.b=input_b.q[22];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+          movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+
+      if (z_led[23]==1){
+        alu.a=z_led[23];
+          alu.b=input_a.q[23];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+          movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[23];
+          alu.b=input_b.q[23];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+          movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+            
+     if (z_led[24]==1){
+        alu.a=z_led[24];
+          alu.b=input_a.q[24];
+          alu.alufn=8b00110011;
+          //KILL P1
+           
+          movement.p1die= alu.out;
+          if(movement.p1kill){
+              state.d=state.KILL_P1;}
+            else{
+            alu.a=z_led[24];
+          alu.b=input_b.q[24];
+          alu.alufn=8b00110011;
+          //KILL P2
+           
+        movement.p2die= alu.out;
+          if(movement.p2kill){
+              state.d=state.KILL_P2;}}}
+
+         
+          
+        //MOVE CONDITIONS
           if(button[0]){ //when up button press AND NOT ON TOP ROW
             if( (p1map.q != 25b1000000000000000000000000) && (p1map.q != 25b0100000000000000000000000) && (p1map.q != 25b0010000000000000000000000) && (p1map.q != 25b0001000000000000000000000) && (p1map.q != 25b0000100000000000000000000) && (p2map.q != (p1map.q<<5))){
               state.d = state.COMPUTE_UP_P1;}
@@ -86,6 +576,24 @@ module playermovement (
             if( (p2map.q != 25b0000000000000000000010000) && (p2map.q != 25b0000000000000000000001000) && (p2map.q != 25b0000000000000000000000100) && (p2map.q != 25b0000000000000000000000010) && (p2map.q != 25b0000000000000000000000001) && (p1map.q != (p2map.q>>5))){
               state.d = state.COMPUTE_DOWN_P2;}
           }
+        //KILLP1 WITH MULTIPLY ALU
+      state.KILL_P1:
+      alu.a=input_a.q;
+        alu.b=8d0;
+      alu.alufn=8b00000010;
+        p1map.d=alu.out;
+      movement.init=p1map.q;
+        state.d=state.SAVE_A;
+        //KILLP2 with MULTIPLY ALU
+      state.KILL_P2:
+      alu.a=input_b.q;
+        alu.b=8d0;
+      alu.alufn=8b00000010;
+        p2map.d=alu.out;
+      movement.init2=p2map.q;
+        state.d=state.SAVE_A;
+        
+        //ALL COMPUTE USING SHIFTER ALU
         state.COMPUTE_LEFT_P1: //compute output
            //after centre button is pressed
           alu.a = input_a.q;

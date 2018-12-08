@@ -3,6 +3,10 @@ module movement (
     input rst,  // reset
     input init[25],
     input init2[25],
+    input p1die,
+    input p2die,
+    output p1kill,
+    output p2kill,
     output p1move[25],
     output p2move[25]
   ) {
@@ -13,7 +17,8 @@ module movement (
      
    p1move=init;
    p2move=init2;
-    
+    p1kill=p1die;
+    p2kill=p2die;
     
     
     

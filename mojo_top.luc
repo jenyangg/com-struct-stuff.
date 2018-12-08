@@ -11,24 +11,25 @@ module mojo_top (
     input avr_tx,           // AVR TX (FPGA RX)
     output avr_rx,          // AVR RX (FPGA TX)
     input avr_rx_busy,      // AVR RX buffer full
-    input io_button[5],
     input button[8],
     input start_button,
-    //input check_grid[25],
+    input level_2_button,
+    input reset_btn,
     output grid_led[25],
-    output z_led[25],
-    output sevens[8],
-    output lemmetry[2]
+    output z_led[25]
+    
+    
+    
   ) {
   
   sig rst;                  // reset signal
   
   .clk(clk) {
-    reset_conditioner reset_cond;
-    
     edge_detector edge_detector (#RISE(1), #FALL(0));
-    
+    reset_conditioner reset_cond;
+    button_conditioner bclvl2;
     button_conditioner bcstart;
+    button_conditioner bcreset;
     button_conditioner bc1up;
     button_conditioner bc1down;
     button_conditioner bc1left;
@@ -38,6 +39,8 @@ module mojo_top (
     button_conditioner bc2left;
     button_conditioner bc2right;
     
+    edge_detector edreset (#FALL(0));
+    edge_detector edlevel2 (#FALL(0));
     edge_detector edstart (#FALL(0));
     edge_detector ed1up (#FALL(0));
     edge_detector ed1down (#FALL(0));
@@ -49,21 +52,24 @@ module mojo_top (
     edge_detector ed2right (#FALL(0));
     
     fsm state = {DEFAULT, GO, SURVIVED,DEAD};
-    playermovement playermovement;
-    zombmovement zombmovement;
-   
+  playermovement playermovement;
+   zombmovement zombmovement;
+   zomb2movement zomb2movement;
    
    .rst(rst) {
     counter countr(#SIZE(1), #DIV(24));
-    multi_dec_ctr dec_ctr;
-    multi_seven_seg seg;
     }
   }
   
-
+  
+  
   always {
     reset_cond.in = ~rst_n; // input raw inverted reset signal
-    rst = reset_cond.out;   // conditioned reset    
+    rst = reset_cond.out;   // conditioned reset
+    
+    
+    
+    
     spi_miso = bz;          // not using SPI
     spi_channel = bzzzz;    // not using flags
     avr_rx = bz;            // not using serial port
@@ -71,8 +77,19 @@ module mojo_top (
     
     
    ////// BUTTONS //////
+    bcreset.in = reset_btn;  //RESET
+    edreset.in = bcreset.out;
+    playermovement.reset_btn = edreset.out;
+    zombmovement.reset_btn = edreset.out;
+    zomb2movement.reset_btn = edreset.out;
     
-    bcstart.in = start_button;
+    bclvl2.in = level_2_button;  //LEVEL 2 INIT
+    edlevel2.in = bclvl2.out;
+    playermovement.level_2_button = edlevel2.out;
+    zombmovement.level_2_button = edlevel2.out;
+    zomb2movement.level_2_button = edlevel2.out;
+    
+    bcstart.in = start_button;    //LEVEL 1 INIT
     edstart.in = bcstart.out;
     playermovement.start_button = edstart.out;
     zombmovement.start_button = edstart.out;
@@ -81,66 +98,65 @@ module mojo_top (
     ed1up.in = bc1up.out;
     playermovement.button[0] = ed1up.out;
     zombmovement.button[0] = ed1up.out;
+    zomb2movement.button[0] = ed1up.out;
     
     bc1left.in = button[1];
     ed1left.in = bc1left.out;
     playermovement.button[1] = ed1left.out;
     zombmovement.button[1] = ed1left.out;
+    zomb2movement.button[1] = ed1left.out;
     
     bc1right.in = button[2];
     ed1right.in = bc1right.out;
     playermovement.button[2] = ed1right.out;
     zombmovement.button[2] = ed1right.out;
+    zomb2movement.button[2] = ed1right.out;
     
     bc1down.in = button[3];
     ed1down.in = bc1down.out;
     playermovement.button[3] = ed1down.out;
     zombmovement.button[3] = ed1down.out;
+    zomb2movement.button[3] = ed1down.out;
     
     bc2up.in = button[4];
     ed2up.in = bc2up.out;
     playermovement.button[4] = ed2up.out;
     zombmovement.button[4] = ed2up.out;
+    zomb2movement.button[4] = ed2up.out;
     
     bc2left.in = button[5];
     ed2left.in = bc2left.out;
     playermovement.button[5] = ed2left.out;
     zombmovement.button[5] = ed2left.out;
+    zomb2movement.button[5] = ed2left.out;
     
     bc2right.in = button[6];
     ed2right.in = bc2right.out;
     playermovement.button[6] = ed2right.out;
     zombmovement.button[6] = ed2right.out;
+    zomb2movement.button[6] = ed2right.out;
     
     bc2down.in = button[7];
     ed2down.in = bc2down.out;
     playermovement.button[7] = ed2down.out;
     zombmovement.button[7] = ed2down.out;
+    zomb2movement.button[7] = ed2down.out;
     
     
     /////////////////////
-    playermovement.z_led[24:0]=zombmovement.z_led;
+    playermovement.z_led[24:0]=zombmovement.z_led;  //FOR PLAYER KILL
     grid_led[24:0] = playermovement.grid_led[24:0];
     
-    zombmovement.grid_led[24:0]=playermovement.grid_led[24:0];
+    zombmovement.grid_led[24:0]=playermovement.grid_led[24:0];  //FOR ZOMBIE TO LOCATE AND KILL PLAYER
+    zomb2movement.grid_led[24:0]=playermovement.grid_led[24:0];
     zombmovement.rst = rst;
-    z_led[24:0] = zombmovement.z_led[24:0];
+    zomb2movement.rst = rst;
     zombmovement.signal = 0;
+    zomb2movement.signal = 0;
+    z_led[24:0] = zombmovement.z_led[24:0];    //TO INIT ZOMBIE GRID
     
-    ////////////////////
-    
+    //
     edge_detector.in = 0;
-    
-    seg.values[0] =4b0;
-    seg.values[1] =4b0;
-
-    
-   
-    dec_ctr.inc = 0;
-    sevens = 8b11111111;
-    lemmetry[0] = 0;
-    lemmetry[1] = 1;
-    
     
     case(state.q){
     state.DEFAULT:
@@ -151,19 +167,11 @@ module mojo_top (
     state.GO:
     edge_detector.in = countr.value;
     zombmovement.signal = edge_detector.out;
-    dec_ctr.inc = edge_detector.out;
-    seg.values[0] = dec_ctr.digits[0];
-    seg.values[1] = dec_ctr.digits[1];
-    sevens = ~seg.seg;
-    lemmetry = ~seg.sel;
-    
-    
-    if (seg.seg != 8b0111111){
-      if(playermovement.grid_led == 25b0){
+    if(playermovement.grid_led == 25b0){
         state.d = state.DEAD;
-    }}
+    }
     state.DEAD:
-    dec_ctr.inc = 0;  
-  }
- }
+    	edge_detector.in = 0;
+    }
+    }
 }
